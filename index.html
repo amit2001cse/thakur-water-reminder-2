@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thakur's Water Reminder</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        water: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    },
+                    animation: {
+                        'wave': 'wave 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        wave: {
+                            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-6px) rotate(2deg)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+        }
+
+        /* Fluid Glass Container */
+        .glass-water-container {
+            position: relative;
+            width: 150px;
+            height: 190px;
+            border: 5px solid rgba(14, 165, 233, 0.6);
+            border-top: none;
+            border-radius: 0 0 35px 35px;
+            background: rgba(224, 242, 254, 0.08);
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.3), inset 0 -10px 20px rgba(14, 165, 233, 0.2);
+        }
+
+        .water-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+            transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .water-wave {
+            position: absolute;
+            top: -12px;
+            left: -50%;
+            width: 200%;
+            height: 20px;
+            background: rgba(56, 189, 248, 0.8);
+            border-radius: 40%;
+            animation: waveMotion 4s linear infinite;
+        }
+
+        @keyframes waveMotion {
+            0% { transform: translateX(0) rotate(0deg); }
+            50% { transform: translateX(-25%) rotate(180deg); }
+            100% { transform: translateX(-50%) rotate(360deg); }
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(14, 165, 233, 0.4); border-radius: 10px; }
+    </style>
+</head>
+<body class="text-slate-100 pb-12 antialiased">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 glass-card border-b border-white/10 px-4 lg:px-8 py-3 mb-6">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-500 to-cyan-400 text-white shadow-lg shadow-sky-500/30 animate-wave">
+                    <i class="fa-solid fa-droplet text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent leading-tight">
+                        Thakur's Water Reminder
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-heart text-rose-400 text-[10px]"></i> Hydration Companion
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs">
+                    <i class="fa-solid fa-fire text-amber-400"></i>
+                    <span id="streakText">1 Day Streak</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6">
+
+        <!-- Progress Card -->
+        <div class="glass-card rounded-3xl p-6 mb-6 shadow-2xl relative overflow-hidden">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div>
+                    <span class="text-xs uppercase tracking-wider font-bold text-sky-400">Daily Hydration Target</span>
+                    <h2 class="text-2xl font-black text-white flex items-center gap-2">
+                        <span id="intakeDisplay">0</span> <span class="text-lg font-normal text-slate-400">/ <span id="targetDisplay">2000</span> ml</span>
+                        <span id="completionBadge" class="hidden text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold">Goal Reached! 🎉</span>
+                    </h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="decrementGoalBtn" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 font-bold hover:bg-slate-700 transition flex items-center justify-center">-</button>
+                    <span class="text-xs font-semibold text-slate-300">Target</span>
+                    <button id="incrementGoalBtn" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-200 font-bold hover:bg-slate-700 transition flex items-center justify-center">+</button>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800/80 rounded-full h-4 overflow-hidden p-0.5 border border-slate-700">
+                <div id="progressBarFill" class="bg-gradient-to-r from-sky-400 via-cyan-400 to-blue-500 h-full rounded-full transition-all duration-700 relative" style="width: 0%"></div>
+            </div>
+            
+            <div class="flex justify-between items-center text-xs text-slate-300 mt-2 font-semibold">
+                <span id="percentageText">0% Completed</span>
+                <span id="glassesLeftText">8 glasses remaining (250ml each)</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Controls Column -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Timer Card -->
+                <div class="glass-card rounded-3xl p-6 sm:p-8 shadow-2xl text-center">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/20 text-sky-300 text-xs font-extrabold uppercase tracking-widest mb-4">
+                        <i class="fa-solid fa-clock"></i> Next Voice Alert In
+                    </div>
+
+                    <div class="my-3">
+                        <span id="timerDisplay" class="text-6xl sm:text-7xl font-black font-mono tracking-wider text-white">
+                            30:00
+                        </span>
+                    </div>
+
+                    <p class="text-sm font-medium text-slate-300 mb-6">
+                        Automatic background audio voice alerts execute every interval.
+                    </p>
+
+                    <div class="flex flex-wrap items-center justify-center gap-3">
+                        <button id="toggleTimerBtn" class="flex-1 min-w-[140px] px-6 py-3.5 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold shadow-lg shadow-sky-500/30 active:scale-95 transition flex items-center justify-center gap-2 text-sm">
+                            <i id="toggleTimerIcon" class="fa-solid fa-pause"></i>
+                            <span id="toggleTimerText">Pause Reminders</span>
+                        </button>
+                        
+                        <button id="resetTimerBtn" class="px-4 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold transition active:scale-95 text-sm" title="Reset Timer">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+
+                        <button id="testReminderBtn" class="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold shadow-lg shadow-emerald-500/25 active:scale-95 transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-bullhorn"></i> Test Voice Alert
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Voice Message -->
+                <div class="glass-card rounded-3xl p-6 shadow-2xl space-y-3">
+                    <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-volume-high text-sky-400"></i> Voice Message Customization
+                    </h3>
+                    <input type="text" id="speechText" value="Thakur, take a glass of water" class="w-full px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+
+            </div>
+
+            <!-- Glass & Logs Column -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <!-- Water Fill Glass Card -->
+                <div class="glass-card rounded-3xl p-6 shadow-2xl flex flex-col items-center justify-center text-center">
+                    <h3 class="text-base font-extrabold text-white mb-1">Log Water Intake</h3>
+                    <p class="text-xs text-slate-300 mb-5">Click glass or button to log 250ml</p>
+
+                    <!-- Animated Water Glass -->
+                    <div id="interactiveGlass" class="glass-water-container cursor-pointer transition-transform hover:scale-105 active:scale-95 mb-5" title="Click to log a glass!">
+                        <div id="waterFill" class="water-fill" style="height: 0%;">
+                            <div class="water-wave"></div>
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center font-black text-white text-lg drop-shadow">
+                            <span>250 ml</span>
+                        </div>
+                    </div>
+
+                    <button id="addGlassBtn" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white font-extrabold shadow-lg shadow-sky-500/25 active:scale-95 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-glass-water text-lg"></i> I Drank Water 💧
+                    </button>
+                </div>
+
+                <!-- History Logs -->
+                <div class="glass-card rounded-3xl p-6 shadow-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-sky-400"></i> Today's History
+                        </h3>
+                        <button id="clearLogsBtn" class="text-xs text-slate-400 hover:text-rose-400 transition">Clear All</button>
+                    </div>
+                    <div id="logContainer" class="space-y-2 max-h-[180px] overflow-y-auto pr-1"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Logic Controller -->
+    <script>
+        const SystemState = {
+            targetGoalMl: 2000,
+            currentIntakeMl: 0,
+            intervalMinutes: 30,
+            timeRemainingSeconds: 30 * 60,
+            isTimerRunning: true,
+            timerIntervalId: null,
+            logs: []
+        };
+
+        const SoundSystem = {
+            playWaterDropSound() {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.15);
+                } catch(e) { console.log(e); }
+            }
+        };
+
+        const VoiceEngine = {
+            speak(text) {
+                if (!('speechSynthesis' in window)) return;
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 0.95;
+                utterance.pitch = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        };
+
+        const StorageEngine = {
+            save() {
+                localStorage.setItem('thakur_water_system_state', JSON.stringify({
+                    targetGoalMl: SystemState.targetGoalMl,
+                    currentIntakeMl: SystemState.currentIntakeMl,
+                    logs: SystemState.logs,
+                    lastSavedDate: new Date().toDateString()
+                }));
+            },
+            load() {
+                const saved = localStorage.getItem('thakur_water_system_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.lastSavedDate === new Date().toDateString()) {
+                        SystemState.currentIntakeMl = parsed.currentIntakeMl || 0;
+                        SystemState.logs = parsed.logs || [];
+                    }
+                    SystemState.targetGoalMl = parsed.targetGoalMl || 2000;
+                }
+            }
+        };
+
+        function startTimer() {
+            if (SystemState.timerIntervalId) clearInterval(SystemState.timerIntervalId);
+            SystemState.isTimerRunning = true;
+            SystemState.timerIntervalId = setInterval(() => {
+                if (SystemState.timeRemainingSeconds > 0) {
+                    SystemState.timeRemainingSeconds--;
+                    renderTimer();
+                } else {
+                    triggerVoiceReminder();
+                    resetTimer();
+                }
+            }, 1000);
+        }
+
+        function resetTimer() {
+            SystemState.timeRemainingSeconds = SystemState.intervalMinutes * 60;
+            renderTimer();
+        }
+
+        function renderTimer() {
+            const mins = Math.floor(SystemState.timeRemainingSeconds / 60);
+            const secs = SystemState.timeRemainingSeconds % 60;
+            document.getElementById('timerDisplay').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function triggerVoiceReminder() {
+            const text = document.getElementById('speechText').value || "Thakur, take a glass of water";
+            VoiceEngine.speak(text);
+        }
+
+        function addWaterIntake(amountMl = 250) {
+            SystemState.currentIntakeMl += amountMl;
+            SoundSystem.playWaterDropSound();
+
+            const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            SystemState.logs.unshift({ id: Date.now(), amountMl, time: timeString });
+
+            StorageEngine.save();
+            updateUI();
+
+            if (SystemState.currentIntakeMl >= SystemState.targetGoalMl) {
+                confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('intakeDisplay').textContent = SystemState.currentIntakeMl;
+            document.getElementById('targetDisplay').textContent = SystemState.targetGoalMl;
+
+            const percentage = Math.min(100, Math.round((SystemState.currentIntakeMl / SystemState.targetGoalMl) * 100));
+            document.getElementById('progressBarFill').style.width = `${percentage}%`;
+            document.getElementById('percentageText').textContent = `${percentage}% Completed`;
+            document.getElementById('waterFill').style.height = `${percentage}%`;
+
+            const remainingMl = Math.max(0, SystemState.targetGoalMl - SystemState.currentIntakeMl);
+            const glassesLeft = Math.ceil(remainingMl / 250);
+            document.getElementById('glassesLeftText').textContent = `${glassesLeft} glasses remaining (250ml each)`;
+
+            const badge = document.getElementById('completionBadge');
+            if (percentage >= 100) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            const container = document.getElementById('logContainer');
+            container.innerHTML = '';
+            if (SystemState.logs.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No water logs registered today yet.</p>`;
+            } else {
+                SystemState.logs.forEach(log => {
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs';
+                    item.innerHTML = `<span class="font-bold text-sky-300">💧 +${log.amountMl} ml</span><span class="text-slate-400 font-medium">${log.time}</span>`;
+                    container.appendChild(item);
+                });
+            }
+        }
+
+        document.getElementById('addGlassBtn').addEventListener('click', () => addWaterIntake(250));
+        document.getElementById('interactiveGlass').addEventListener('click', () => addWaterIntake(250));
+        document.getElementById('testReminderBtn').addEventListener('click', triggerVoiceReminder);
+
+        document.getElementById('toggleTimerBtn').addEventListener('click', () => {
+            if (SystemState.isTimerRunning) {
+                clearInterval(SystemState.timerIntervalId);
+                SystemState.isTimerRunning = false;
+                document.getElementById('toggleTimerText').textContent = 'Resume Reminders';
+                document.getElementById('toggleTimerIcon').className = 'fa-solid fa-play';
+            } else {
+                startTimer();
+                document.getElementById('toggleTimerText').textContent = 'Pause Reminders';
+                document.getElementById('toggleTimerIcon').className = 'fa-solid fa-pause';
+            }
+        });
+
+        document.getElementById('resetTimerBtn').addEventListener('click', resetTimer);
+
+        document.getElementById('incrementGoalBtn').addEventListener('click', () => {
+            SystemState.targetGoalMl += 250;
+            StorageEngine.save();
+            updateUI();
+        });
+
+        document.getElementById('decrementGoalBtn').addEventListener('click', () => {
+            if (SystemState.targetGoalMl > 500) {
+                SystemState.targetGoalMl -= 250;
+                StorageEngine.save();
+                updateUI();
+            }
+        });
+
+        document.getElementById('clearLogsBtn').addEventListener('click', () => {
+            SystemState.currentIntakeMl = 0;
+            SystemState.logs = [];
+            StorageEngine.save();
+            updateUI();
+        });
+
+        StorageEngine.load();
+        renderTimer();
+        startTimer();
+        updateUI();
+    </script>
+</body>
+</html>
